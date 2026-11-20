@@ -1,0 +1,6 @@
+# This Dockerfile is to enable STOMP with RabbitMQ
+# We need to expose the STOMP port too when running the container using:
+# docker run -d --name peril_rabbitmq -p 5672:5672 -p 15672:15672 -p 61613:61613 rabbitmq-stomp
+
+FROM rabbitmq:3.13-management
+RUN rabbitmq-plugins enable --offline rabbitmq_stomp
