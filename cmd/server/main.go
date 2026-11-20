@@ -19,9 +19,9 @@ func main() {
 	}
 	defer rabbitConn.Close()
 	fmt.Println("Connection with RabbitMQ has been established!")
-	channel, err := rabbitConn.Channel()
+	channel, _, err := pubsub.DeclareAndBind(rabbitConn, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.DurableQueue)
 	if err != nil {
-		log.Fatalf("error creating channel: %v", err)
+		log.Fatal(err)
 	}
 	gamelogic.PrintServerHelp()
 	for {
