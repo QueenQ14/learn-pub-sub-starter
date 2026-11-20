@@ -22,3 +22,20 @@ func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	}
 	return nil
 }
+
+func DeclareAndBind(conn *amqp.Connection, exchange, queueName, key string, queueType SimpleQueueType) (*amqp.Channel, amqp.Queue, error) {
+	channel, err := conn.Channel()
+	if err != nil {
+		return nil, amqp.Queue{}, err
+	}
+	isDurable := queueType == DurableQueue
+	queue, err := channel.QueueDeclare(queueName, isDurable, !isDurable, !isDurable, false, nil)
+	if err != nil {
+		return nil, amqp.Queue{}, err
+	}
+	if err = channel.QueueBind(queueName, key, exchange, false, nil); err != nil {
+		return nil, amqp.Queue{}, err
+	}
+
+	return channel, queue, nil
+}
