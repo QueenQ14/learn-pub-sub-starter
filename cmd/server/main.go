@@ -46,7 +46,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-		case "exit":
+		case "quit":
 			fmt.Println("Closing game...")
 			return
 		default:

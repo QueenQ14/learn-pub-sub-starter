@@ -24,25 +24,32 @@ func main() {
 		log.Fatalf("error welcoming user: %v", err)
 	}
 	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, userName)
-	_, _, err = pubsub.DeclareAndBind(rabbitConn, routing.ExchangePerilDirect, queueName, routing.PauseKey, pubsub.TransientQueue)
-	if err != nil {
-		log.Fatalf("error creating queue: %v", err)
-	}
 	gameState := gamelogic.NewGameState(userName)
+	if err := pubsub.SubscribeJSON(rabbitConn,
+		routing.ExchangePerilDirect,
+		queueName,
+		routing.PauseKey,
+		pubsub.TransientQueue,
+		handlerPause(gameState),
+	); err != nil {
+		log.Fatal(err)
+	}
 	for {
 		input := gamelogic.GetInput()
-		if input == nil {
+		if len(input) == 0 {
 			continue
 		}
 		switch input[0] {
 		case "spawn":
 			if err := gameState.CommandSpawn(input); err != nil {
-				log.Fatal(err)
+				fmt.Println(err)
+				continue
 			}
 		case "move":
 			move, err := gameState.CommandMove(input)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(err)
+				continue
 			}
 			fmt.Printf("move has been made by %s!\n", move.Player.Username)
 		case "status":
