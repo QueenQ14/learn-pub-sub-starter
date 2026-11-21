@@ -25,12 +25,27 @@ func main() {
 	}
 	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, userName)
 	gameState := gamelogic.NewGameState(userName)
-	if err := pubsub.SubscribeJSON(rabbitConn,
+	if err := pubsub.SubscribeJSON(
+		rabbitConn,
 		routing.ExchangePerilDirect,
 		queueName,
 		routing.PauseKey,
 		pubsub.TransientQueue,
 		handlerPause(gameState),
+	); err != nil {
+		log.Fatal(err)
+	}
+	movesChannel, err := rabbitConn.Channel()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := pubsub.SubscribeJSON(
+		rabbitConn,
+		routing.ExchangePerilTopic,
+		routing.ArmyMovesPrefix+"."+userName,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.TransientQueue,
+		handlerMove(gameState),
 	); err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +66,12 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Printf("move has been made by %s!\n", move.Player.Username)
+			err = pubsub.PublishJSON(movesChannel, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+userName, move)
+			if err != nil {
+				fmt.Printf("error: %s\n", err)
+				continue
+			}
+			fmt.Printf("Moved %v units to %s\n", len(move.Units), move.ToLocation)
 		case "status":
 			gameState.CommandStatus()
 		case "help":
