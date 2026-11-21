@@ -7,7 +7,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string, queueType SimpleQueueType, handler func(T)) error {
+func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string, queueType SimpleQueueType, handler func(T) AckType) error {
 	channel, queue, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
 		return fmt.Errorf("error binding queue: %w", err)
@@ -24,8 +24,21 @@ func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string
 				fmt.Printf("error unmarshalling delivery body: %v\n", err)
 				continue
 			}
-			handler(obj)
-			delivery.Ack(false)
+			ackType := handler(obj)
+			switch ackType {
+			case Ack:
+				fmt.Println("case Ack")
+				delivery.Ack(false)
+			case NackRequeue:
+				fmt.Println("case NackRequeue")
+				delivery.Nack(false, true)
+			case NackDiscard:
+				fmt.Println("case NackDiscard")
+				delivery.Nack(false, false)
+			default:
+				fmt.Printf("unrecognized ack-type: %v\n", ackType)
+				continue
+			}
 		}
 	}()
 	return nil
